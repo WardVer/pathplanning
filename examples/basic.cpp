@@ -107,12 +107,12 @@ int main() {
             for(cone &test_cone : all_cones)
             {
                 std::cout << test_cone.location << std::endl;
-                std::cout << cv::Point2i((d.coords[2*d.triangles[i]], d.coords[2*d.triangles[i]+1])) << std::endl;
-                if(test_cone.location == cv::Point2i((d.coords[2*d.triangles[i]], d.coords[2*d.triangles[i]+1])))
+                std::cout << cv::Point2i((d.coords[2*d.triangles[i]], d.coords[2*d.triangles[i] + 1])) << std::endl;
+                if(test_cone.location == cv::Point2i(d.coords[2*d.triangles[i]], d.coords[2*d.triangles[i]+1]))
                 {
                     a_node.cone1 = test_cone;
                 }
-                if(test_cone.location == cv::Point2i((d.coords[2*d.triangles[i+1]], d.coords[2*d.triangles[i+1]+1])))
+                if(test_cone.location == cv::Point2i(d.coords[2*d.triangles[i+1]], d.coords[2*d.triangles[i+1]+1]))
                 {
                     a_node.cone2 = test_cone;
                 }
@@ -128,11 +128,11 @@ int main() {
             tracknode a_node;
             for(cone &test_cone : all_cones)
             {
-                if(test_cone.location == cv::Point2i((d.coords[2*d.triangles[i+1]], d.coords[2*d.triangles[i+1]+1])))
+                if(test_cone.location == cv::Point2i(d.coords[2*d.triangles[i+1]], d.coords[2*d.triangles[i+1]+1]))
                 {
                     a_node.cone1 = test_cone;
                 }
-                if(test_cone.location == cv::Point2i((d.coords[2*d.triangles[i+2]], d.coords[2*d.triangles[i+2]+1])))
+                if(test_cone.location == cv::Point2i(d.coords[2*d.triangles[i+2]], d.coords[2*d.triangles[i+2]+1]))
                 {
                     a_node.cone2 = test_cone;
                 }
@@ -148,11 +148,11 @@ int main() {
             tracknode a_node;
             for(cone &test_cone : all_cones)
             {
-                if(test_cone.location == cv::Point2i((d.coords[2*d.triangles[i]], d.coords[2*d.triangles[i]+1])))
+                if(test_cone.location == cv::Point2i(d.coords[2*d.triangles[i]], d.coords[2*d.triangles[i]+1]))
                 {
                     a_node.cone1 = test_cone;
                 }
-                if(test_cone.location == cv::Point2i((d.coords[2*d.triangles[i+2]], d.coords[2*d.triangles[i+2]+1])))
+                if(test_cone.location == cv::Point2i(d.coords[2*d.triangles[i+2]], d.coords[2*d.triangles[i+2]+1]))
                 {
                     a_node.cone2 = test_cone;
                 }
