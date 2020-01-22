@@ -4,10 +4,14 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/opencv.hpp>
-#include <unordered_set>
+#include <chrono>
 #include <random>
+#include <unordered_set>
 
 #define maxcost 10
+
+std::chrono::steady_clock::time_point begin;
+std::chrono::steady_clock::time_point end;
 
 cv::Scalar color(0, 255, 255);
 int colori = 0;
@@ -23,8 +27,8 @@ struct tracknode {
     cone cone1;
     cone cone2;
 
-    cone *leftcone;
-    cone *rightcone;
+    cone* leftcone;
+    cone* rightcone;
 
     float pathcost = 1000;
     int inpath = 0;
@@ -83,19 +87,35 @@ void color_cost(tracknode* newnode, tracknode* currentnode) {
     if (newnode->leftcone->type == 0 && newnode->rightcone->type == 1) {
         newnode->pathcost += 10;
     }
-    
 }
 
-void dist_cost(tracknode* newnode, tracknode* currentnode)
-{
+void dist_cost(tracknode* newnode, tracknode* currentnode) {
     /*int r = std::rand() % ( 255 );
     int g = std::rand() % ( 255 );
     int b = std::rand() % ( 255 );*/
-    newnode->pathcost += cv::norm(newnode->location-currentnode->location)/50;
+    newnode->pathcost += cv::norm(newnode->location - currentnode->location) / 25;
     /*std::cout << newnode->pathcost << std::endl;
     cv::circle(pathmap, newnode->location, 4, cv::Scalar(b, g, r), 4);
     cv::imshow("map", pathmap);
     cv::waitKey(0);*/
+}
+
+void angle_cost(tracknode* newnode, tracknode* currentnode) {
+
+    float angle;
+    if(currentnode->prevnode != NULL)
+    {
+        angle = calc_angle(newnode->location - currentnode->location, currentnode->location - currentnode->prevnode->location);
+    }
+    else
+    {
+        angle = calc_angle(newnode->location - currentnode->location, cv::Point2i(0,-1));
+    }
+    
+
+    
+    newnode->pathcost += 4 * abs(angle);
+    
 }
 
 /*
@@ -111,13 +131,13 @@ void calc_cost(tracknode* currentnode, std::vector<tracknode*> opennodes) {
     cv::waitKey(0);*/
     for (int i = 0; i < opennodes.size(); i++) {
 
-        if(opennodes.at(i)->inpath  != 1)
-        {
-        opennodes.at(i)->pathcost = 0;
-        color_cost(opennodes.at(i), currentnode);
-        dist_cost(opennodes.at(i), currentnode);
+        if (opennodes.at(i)->inpath != 1) {
+            opennodes.at(i)->pathcost = 0;
+            color_cost(opennodes.at(i), currentnode);
+            dist_cost(opennodes.at(i), currentnode);
+            angle_cost(opennodes.at(i), currentnode);
         }
-        //angle_cost();
+        
         //width_cost();
     }
 }
@@ -143,10 +163,11 @@ int main() {
     }
 
     //triangulation happens here
+    begin = std::chrono::steady_clock::now();
     delaunator::Delaunator d(conepos);
 
     for (int i = 0; i < d.triangles.size(); i += 3) {
-        
+
         cv::line(pathmap, cv::Point2i(d.coords[2 * d.triangles[i]], d.coords[2 * d.triangles[i] + 1]), cv::Point(d.coords[2 * d.triangles[i + 1]], d.coords[2 * d.triangles[i + 1] + 1]), cv::Scalar(0, 0, 0), 1);
         cv::line(pathmap, cv::Point2i(d.coords[2 * d.triangles[i + 1]], d.coords[2 * d.triangles[i + 1] + 1]), cv::Point(d.coords[2 * d.triangles[i + 2]], d.coords[2 * d.triangles[i + 2] + 1]), cv::Scalar(0, 0, 0), 1);
         cv::line(pathmap, cv::Point2i(d.coords[2 * d.triangles[i]], d.coords[2 * d.triangles[i] + 1]), cv::Point(d.coords[2 * d.triangles[i + 2]], d.coords[2 * d.triangles[i + 2] + 1]), cv::Scalar(0, 0, 0), 1);
@@ -205,7 +226,7 @@ int main() {
             added_points.push_back(pt3);
         }
     }
-/*
+    /*
     for (tracknode& nde : all_nodes) {
 
         cv::Scalar color1(0, 0, 0);
@@ -234,14 +255,14 @@ int main() {
         cv::circle(pathmap, nde.cone2.location, 4, color2, 4);
         cv::imshow("map", pathmap);
         cv::waitKey(0);
-    }*/
+    }
     cv::imshow("map", pathmap);
-    cv::waitKey(0);
+    cv::waitKey(0);*/
 
     tracknode carnode;
     tracknode* currentnode;
     carnode.pathnr = 0;
-    carnode.location = cv::Point2i(250,500);
+    carnode.location = cv::Point2i(250, 500);
     carnode.prevnode = NULL;
     carnode.inpath = 1;
     std::vector<tracknode*> opennodes;
@@ -251,51 +272,62 @@ int main() {
     std::vector<cone*> finalleft;
     std::vector<cone*> finalright;
 
-    for (int o = 0; o <500; o++) {
+    for (int o = 0; o < 500; o++) {
 
         finalpath.push_back(currentnode);
-        
+
         opennodes.clear();
-        for (int i=0; i<all_nodes.size(); i++) 
-        opennodes.push_back(&all_nodes[i]);
+        for (int i = 0; i < all_nodes.size(); i++) 
+        {
+            if (all_nodes[i].inpath == 0)
+                opennodes.push_back(&all_nodes[i]);
+        }
         std::vector<tracknode*>::iterator it;
         it = std::find(opennodes.begin(), opennodes.end(), currentnode);
-        if(it != opennodes.end())
-        opennodes.erase(it);
+        if (it != opennodes.end())
+            opennodes.erase(it);
+
         
+
         calc_cost(currentnode, opennodes);
 
         tracknode* bestnode = opennodes.at(0);
 
-        for (tracknode* testnode : opennodes) 
-        {
-            if(testnode->inpath == 1) continue;
-            if (testnode -> pathcost < bestnode->pathcost)
-            {
+        for (tracknode* testnode : opennodes) {
+            if (testnode->inpath == 1) continue;
+            if (testnode->pathcost < bestnode->pathcost) {
                 bestnode = testnode;
             }
         }
-        if(bestnode->pathcost >= 4) break;
+        if (bestnode->pathcost >= 10) break;
         bestnode->inpath = 1;
+        std::cout << currentnode->location << bestnode->location << std::endl;
+
         bestnode->prevnode = currentnode;
-        
+
         currentnode = bestnode;
-
     }
+    std::cout << "here" << std::endl;
+    for (tracknode* final_node : finalpath) {
+        if (final_node->prevnode != NULL) {
+            std::cout << final_node->location << final_node->prevnode->location << std::endl;
 
-    for(tracknode* final_node : finalpath)
-    {
-        if(final_node->prevnode != NULL && final_node->prevnode->leftcone != NULL)
-        {
-        cv::line(pathmap, final_node->location, final_node->prevnode->location, cv::Scalar(0, 255, 0), 2);
-        cv::line(pathmap, final_node->leftcone->location, final_node->prevnode->leftcone->location, cv::Scalar(255, 100, 50), 2);
-        cv::line(pathmap, final_node->rightcone->location, final_node->prevnode->rightcone->location, cv::Scalar(0, 255, 255), 2);
+            cv::line(pathmap, final_node->location, final_node->prevnode->location, cv::Scalar(0, 255, 0), 2);
+            if( final_node->prevnode->leftcone != NULL)
+            {
+                cv::line(pathmap, final_node->leftcone->location, final_node->prevnode->leftcone->location, cv::Scalar(255, 100, 50), 2);
+                cv::line(pathmap, final_node->rightcone->location, final_node->prevnode->rightcone->location, cv::Scalar(0, 255, 255), 2);
+            }
+            /*cv::imshow("map", pathmap);
+            cv::waitKey(0);*/
         }
     }
-while(1)
-{
-    cv::imshow("map", pathmap);
-    cv::waitKey(0);
-}
 
+    end = std::chrono::steady_clock::now();
+    std::cout << "show time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+
+    while (1) {
+        cv::imshow("map", pathmap);
+        cv::waitKey(0);
+    }
 }
